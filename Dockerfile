@@ -1,10 +1,22 @@
 FROM python:3.10-slim-buster
 
+# Base env
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install system dependencies (curl for uv installer, awscli for runtime)
+# Install system deps:
+# - curl: install uv
+# - awscli: S3 sync in pipeline (optional at runtime but included as requested)
+# - ca-certificates: TLS for Mongo/HTTPS
+# - libgomp1: required by scikit-learn wheels
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl awscli \
+    && apt-get install -y --no-install-recommends \
+    curl \
+    awscli \
+    ca-certificates \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (modern Python package/dependency manager)
@@ -24,6 +36,14 @@ ENV PATH="/app/.venv/bin:${PATH}"
 # Copy the rest of the application code
 COPY . /app
 
-# Default command
+# Create writable dirs used at runtime
+RUN mkdir -p /app/prediction_output /app/Artifacts /app/logs \
+    && adduser --disabled-password --gecos "" appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8000
-CMD ["python", "app.py"]
+
+# Prefer running via uvicorn explicitly
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
