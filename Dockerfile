@@ -43,7 +43,11 @@ RUN mkdir -p /app/prediction_output /app/Artifacts /app/logs \
 
 USER appuser
 
-EXPOSE 8000
+# Default app port (overridable at runtime)
+ENV PORT=8000
 
-# Prefer running via uvicorn explicitly
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Document common ports
+EXPOSE 8000 8080
+
+# Run with a configurable port
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT}"]
