@@ -1,0 +1,60 @@
+[project]
+name = "networksecurity"
+version = "0.0.1"
+description = "Network Security Projects For Phising Data"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Arash Shahmansoori", email = "arash.mansoori65@gmail.com" },
+]
+dependencies = [
+  "python-dotenv",
+  "pandas",
+  "numpy",
+  "pymongo==4.*",
+  "certifi",
+  "scikit-learn",
+  "mlflow",
+  "PyYAML",
+  "dnspython",
+  "dagshub",
+  "fastapi",
+  "uvicorn",
+  "python-multipart",
+]
+
+# Build system settings (only needed if building a wheel/sdist)
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.5.5",
+]
+
+[tool.ruff]
+# Target Python version and line length for formatting and linting
+target-version = "py310"
+line-length = 100
+src = ["networksecurity", "."]
+exclude = ["Artifacts", "logs", "final_model", "prediction_output", ".venv"]
+
+[tool.ruff.lint]
+# Enable a pragmatic, fast rule set: E,F (pycodestyle/pyflakes), I (isort),
+# UP (pyupgrade), B (bugbear), C4 (comprehensions), SIM (simplicity)
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["networksecurity"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Use ruff as the formatter (Black-compatible), with double quotes
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+

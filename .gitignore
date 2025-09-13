@@ -1,0 +1,48 @@
+venv
+.env
+
+# Environments
+.env.*
+!.env.example
+
+# Virtual environments (uv / venv)
+.venv/
+env/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+.DS_Store
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / Editor
+.idea/
+*.code-workspace
+# keep .vscode tracked (contains workspace config)
+
+# Project-generated artifacts
+Artifacts/
+logs/
+prediction_output/
