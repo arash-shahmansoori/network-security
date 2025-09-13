@@ -1,7 +1,10 @@
 import os
+import pickle
 import sys
+import tempfile
 from urllib.parse import urlparse
 
+import dagshub
 import mlflow
 from sklearn.ensemble import (
     AdaBoostClassifier,
@@ -24,13 +27,31 @@ from networksecurity.utils.main_utils.utils import (
 from networksecurity.utils.ml_utils.metric.classification_metric import get_classification_score
 from networksecurity.utils.ml_utils.model.estimator import NetworkModel
 
+# Provide MLflow basic auth to DagsHub via env vars if available
+DAGSHUB_USER = os.getenv("DAGSHUB_USER") or os.getenv("MLFLOW_TRACKING_USERNAME")
+DAGSHUB_TOKEN = os.getenv("DAGSHUB_TOKEN") or os.getenv("MLFLOW_TRACKING_PASSWORD")
+if DAGSHUB_USER and DAGSHUB_TOKEN:
+    os.environ["MLFLOW_TRACKING_USERNAME"] = DAGSHUB_USER
+    os.environ["MLFLOW_TRACKING_PASSWORD"] = DAGSHUB_TOKEN
+
+dagshub.init(repo_owner="arash.mansoori65", repo_name="network-security", mlflow=True)
+
 # Configure MLflow tracking so UI can read the same store
 # Prefer env var; otherwise fall back to absolute file store under project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 MLRUNS_DIR = os.path.join(PROJECT_ROOT, "mlruns")
 os.makedirs(MLRUNS_DIR, exist_ok=True)
-DEFAULT_MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", f"file:{MLRUNS_DIR}")
-mlflow.set_tracking_uri(DEFAULT_MLFLOW_URI)
+
+# Use remote tracking server if provided (e.g., DagsHub), otherwise local file store
+ENV_MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI")
+current_uri = mlflow.get_tracking_uri()
+if ENV_MLFLOW_URI:
+    mlflow.set_tracking_uri(ENV_MLFLOW_URI)
+elif current_uri and urlparse(current_uri).scheme in ("http", "https"):
+    # Respect dagshub.init() or any remote server already configured
+    pass
+else:
+    mlflow.set_tracking_uri(f"file:{MLRUNS_DIR}")
 mlflow.set_experiment("network security")
 
 
@@ -56,16 +77,15 @@ class ModelTrainer:
             mlflow.log_metric("f1_score", f1_score)
             mlflow.log_metric("precision", precision_score)
             mlflow.log_metric("recall_score", recall_score)
-            mlflow.sklearn.log_model(best_model, "model")
-            # Model registry does not work with file store
-            if tracking_url_type_store != "file":
-                # Register the model
-                # There are other ways to use the Model Registry, which depends on the use case,
-                # please refer to the doc for more information:
-                # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-                mlflow.sklearn.log_model(best_model, "model", registered_model_name=best_model)
-            else:
+            if tracking_url_type_store == "file":
                 mlflow.sklearn.log_model(best_model, "model")
+            else:
+                # Fallback for remote servers (e.g., older MLflow on DagsHub)
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    model_path = os.path.join(tmpdir, "model.pkl")
+                    with open(model_path, "wb") as f:
+                        pickle.dump(best_model, f)
+                    mlflow.log_artifact(model_path, artifact_path="model")
 
     def train_model(self, X_train, y_train, x_test, y_test):
         models = {

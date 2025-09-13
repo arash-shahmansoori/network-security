@@ -37,18 +37,34 @@ class DataIngestion:
             database_name = self.data_ingestion_config.database_name
             collection_name = self.data_ingestion_config.collection_name
 
+            # If no Mongo URL, fall back to local CSV
             if not MONGO_DB_URL:
-                raise ValueError("MongoDB URL not configured. Set MONGODB_URL_KEY in environment.")
+                logging.warning(
+                    "MongoDB URL not configured. Falling back to CSV: Network_Data/phisingData.csv"
+                )
+                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+                local_csv = os.path.join(project_root, "Network_Data", "phisingData.csv")
+                return pd.read_csv(local_csv)
 
-            self.mongo_client = pymongo.MongoClient(MONGO_DB_URL, tlsCAFile=ca)
-            collection = self.mongo_client[database_name][collection_name]
+            # Try Mongo first
+            try:
+                self.mongo_client = pymongo.MongoClient(MONGO_DB_URL, tls=True, tlsCAFile=ca)
+                collection = self.mongo_client[database_name][collection_name]
 
-            df = pd.DataFrame(list(collection.find()))
-            if "_id" in df.columns.to_list():
-                df = df.drop(columns=["_id"], axis=1)
+                df = pd.DataFrame(list(collection.find()))
+                if "_id" in df.columns.to_list():
+                    df = df.drop(columns=["_id"], axis=1)
 
-            df.replace({"na": np.nan}, inplace=True)
-            return df
+                df.replace({"na": np.nan}, inplace=True)
+                return df
+            except Exception as mongo_err:
+                logging.warning(
+                    "MongoDB fetch failed (%s). Falling back to CSV: Network_Data/phisingData.csv",
+                    mongo_err,
+                )
+                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+                local_csv = os.path.join(project_root, "Network_Data", "phisingData.csv")
+                return pd.read_csv(local_csv)
         except Exception as e:
             raise NetworkSecurityException(e, sys) from e
 

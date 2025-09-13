@@ -89,3 +89,28 @@ mlflow server \
   --default-artifact-root file:/Users/arashshahmansoori/Desktop/all\ projects/e2e/network_security/mlruns \
   --host 127.0.0.1 --port 5000
 ```
+
+### DagsHub MLflow (remote tracking)
+
+- Authenticate with a DagsHub token (GitHub SSO does not authorize MLflow API):
+
+```bash
+export DAGSHUB_USER="arash.mansoori65"
+export DAGSHUB_TOKEN="<YOUR_DAGSHUB_TOKEN>"
+export MLFLOW_TRACKING_URI="https://dagshub.com/arash.mansoori65/network-security.mlflow"
+```
+
+- The code will forward these to MLflow (`MLFLOW_TRACKING_USERNAME/PASSWORD`) automatically.
+
+- Quick sanity check:
+
+```bash
+python - <<'PY'
+import mlflow
+print("URI:", mlflow.get_tracking_uri())
+mlflow.set_experiment("network security")
+with mlflow.start_run():
+    mlflow.log_metric("auth_sanity", 1.0)
+print("OK")
+PY
+```
